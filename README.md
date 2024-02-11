@@ -1,1 +1,0 @@
-<h1 align="center">Xadrez</h1>
