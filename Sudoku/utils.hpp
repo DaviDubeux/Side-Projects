@@ -23,6 +23,7 @@ class Sudoku {
 private:
     Tile grid[9][9];
     int solved;
+    int unsolved;
 
     void update(int &i, int &j){
         int k = 9*i + j;
@@ -73,6 +74,7 @@ private:
             for (int k = 0; k < 9 && hS; k++){
                 int i = sY0 + k/3;
                 int j = sX0 + k%3;
+                if (i == y && j == x) continue;
 
                 std::list<int>::iterator it;
                 for (it = grid[i][j].pencilMark.begin(); it != grid[i][j].pencilMark.end() && hS; it++){
@@ -99,6 +101,7 @@ private:
         for (int j = 0; j < 9 && !nP; j++){
             if (j == x) continue;
             if (grid[y][j].pencilMark != grid[y][x].pencilMark) continue;
+
             nP = true;
             tempX = j;
         }
@@ -117,6 +120,7 @@ private:
         for (int i = 0; i < 9 && !nP; i++){
             if (i == y) continue;
             if (grid[i][x].pencilMark != grid[y][x].pencilMark) continue;
+
             nP = true;
             tempY = i;
         }
@@ -135,6 +139,7 @@ private:
         for (int k = 0; k < 9 && !nP; k++){
             int i = sY0 + k/3;
             int j = sX0 + k%3;
+
             if (i == y && j == x) continue;
             if (grid[i][j].pencilMark != grid[y][x].pencilMark) continue;
 
@@ -144,7 +149,8 @@ private:
         }
         for (int k = 0; k < 9 && nP; k++){
             int i = sY0 + k/3;
-            int j = sX0 + k%3;                
+            int j = sX0 + k%3;
+
             if (i == y && j == x) continue;
             if (i == tempY && j == tempX) continue;
 
@@ -154,6 +160,7 @@ private:
         for (int k = 0; k < 9 && nP; k++){
             int i = sY0 + k/3;
             int j = sX0 + k%3;
+
             checkLoneSingle(i, j, "Naked pairs");
         }
     }
@@ -305,7 +312,7 @@ private:
             grid[y][j].pencilMark.remove(n4); grid[y][j].visiblePencilMarks[n4] = false;
         }
         for (int j = 0; j < 9 && nQ; j++){
-            checkLoneSingle(y, j, "Naked triplets");
+            checkLoneSingle(y, j, "Naked quads");
         }
 
         // collumn
@@ -338,7 +345,7 @@ private:
             grid[i][x].pencilMark.remove(n4); grid[i][x].visiblePencilMarks[n4] = false;
         }
         for (int i = 0; i < 9 && nQ; i++){
-            checkLoneSingle(i, x, "Naked triplets");
+            checkLoneSingle(i, x, "Naked quads");
         }
 
         // square
@@ -384,21 +391,127 @@ private:
         for (int k = 0; k < 9 && nQ; k++){
             int i = sY0 + k/3;
             int j = sX0 + k%3;
-            checkLoneSingle(i, j, "Naked triplets");
+            checkLoneSingle(i, j, "Naked quads");
         }
     }
 
     void Omission(int y, int x){
         if (grid[y][x].collapsed) return;
 
-        int sY0 = 3*(y/3), sX0 = 3*(x/3);
+        bool oms;
+        int s1Y0 = 3*(y/3), s2Y0, s1X0 = 3*(x/3), s2X0;
 
         for (int n : grid[y][x].pencilMark){
             
+            // row clears square
+            oms = true;
+            for (int j = 0; j < 9 && oms; j++){
+                if (j == x) continue;
+                if (!grid[y][j].visiblePencilMarks[n]) continue;
+
+                s2X0 = 3*(j/3);
+                if (s1X0 != s2X0) oms = false;
+            }
+            for (int k = 0; k < 9 && oms; k++){
+                int i = s1Y0 + k/3;
+                int j = s1X0 + k%3;
+
+                if (i == y) continue;
+
+                grid[i][j].pencilMark.remove(n); grid[i][j].visiblePencilMarks[n] = false;
+            }
+            for (int k = 0; k < 9 && oms; k++){
+                int i = s1Y0 + k/3;
+                int j = s1X0 + k%3;
+
+                if (i == y) continue;
+
+                checkLoneSingle(i, j, "Omission");
+            }
+
+            // square clears row
+            oms = true;
+            for (int k = 0; k < 9 && oms; k++){
+                int i = s1Y0 + k/3;
+                int j = s1X0 + k%3;
+
+                if (i == y) continue;
+
+                if (grid[i][j].visiblePencilMarks[n]) oms = false;
+            }
+            for (int j = 0; j < 9 && oms; j++){
+                s2X0 = 3*(j/3);
+                
+                if (s1X0 == s2X0) continue;
+
+                grid[y][j].pencilMark.remove(n); grid[y][j].visiblePencilMarks[n] = false;
+            }
+            for (int j = 0; j < 9 && oms; j++){
+                s2X0 = 3*(j/3);
+                
+                if (s1X0 == s2X0) continue;
+
+                checkLoneSingle(y, j, "Omission");
+            }
+
+            // collumn clears square
+            oms = true;
+            for (int i = 0; i < 9 && oms; i++){
+                if (i == y) continue;
+                if (!grid[i][x].visiblePencilMarks[n]) continue;
+
+                s2Y0 = 3*(i/3);
+                if (s1Y0 != s2Y0) oms = false;
+            }
+            for (int k = 0; k < 9 && oms; k++){
+                int i = s1Y0 + k/3;
+                int j = s1X0 + k%3;
+
+                if (j == x) continue;
+
+                grid[i][j].pencilMark.remove(n); grid[i][j].visiblePencilMarks[n] = false;
+            }
+            for (int k = 0; k < 9 && oms; k++){
+                int i = s1Y0 + k/3;
+                int j = s1X0 + k%3;
+
+                if (j == x) continue;
+
+                checkLoneSingle(i, j, "Omission");
+            }
+
+            // square clears collumn
+            oms = true;
+            for (int k = 0; k < 9 && oms; k++){
+                int i = s1Y0 + k/3;
+                int j = s1X0 + k%3;
+
+                if (j == x) continue;
+
+                if (grid[i][j].visiblePencilMarks[n]) oms = false;
+            }
+            for (int i = 0; i < 9 && oms; i++){
+                s2Y0 = 3*(i/3);
+                
+                if (s1Y0 == s2Y0) continue;
+
+                grid[i][x].pencilMark.remove(n); grid[i][x].visiblePencilMarks[n] = false;
+            }
+            for (int i = 0; i < 9 && oms; i++){
+                s2Y0 = 3*(i/3);
+                
+                if (s1Y0 == s2Y0) continue;
+
+                checkLoneSingle(i, x, "Omission");
+            }
         }
     }
 
-    void hiddenPairs(int y, int x);
+    void hiddenPairs(int y, int x){
+        if (grid[y][x].collapsed) return;
+    }
+
+    void hiddenTriplets(int y, int x);
 
     void hiddenQuads(int y, int x);
 
@@ -411,7 +524,7 @@ private:
     void uniqueRectangle(int y, int x);
 
 public:
-    Sudoku(){ solved = 0; }
+    Sudoku(){ solved = 0; unsolved = 729; }
     ~Sudoku(){}
 
     void print(){
@@ -461,7 +574,10 @@ public:
         grid[y][x].pencilMark.clear();
         for (int it = 1; it <= 9; it++){
             if (it == v) continue;
+            if (!grid[y][x].visiblePencilMarks[it]) continue;
+            
             grid[y][x].visiblePencilMarks[it] = false;
+            unsolved--;
         }
         solved++;
 
@@ -540,29 +656,31 @@ public:
 
             if (grid[i][j].collapsed) continue;
 
-            // Lone singles
             checkLoneSingle(i, j, "Check lone single");
 
-            // visual elimination is a case of hidden single
-            // repeat(&visualElimination);
-
-            // Hidden Singles
             hiddenSingles(i, j);
 
-            // Naked pairs
             nakedPairs(i, j);
 
-            // Naked triplets
             nakedTriplets(i, j);
 
-            // Naked quads
-            // nakedQuads(i, j);
+            nakedQuads(i, j);
 
-            // Omission
-            // Omission(i, j);
+            Omission(i, j);
 
-            // 
+            // hiddenPairs(i, j);
 
+            // hiddenTriplets(i, j);
+
+            // hiddenQuads(i, j);
+
+            // xWing(i, j);
+
+            // swordFish(i, j);
+
+            // xyWing(i, j);
+
+            // uniqueRectangle(i, j);
         }
         std::cout << '\n';
         if (solved != 81){ // couldn't do anything
